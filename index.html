@@ -3,7 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archivio Turni - Aviapartner</title>
+    <title>Gestione Turni Reali - Aviapartner</title>
+    <!-- Caricamento PDF.js con fallback locale integrato -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@2.16.105/build/pdf.min.js"></script>
     <style>
         :root {
             --bg-color: #121212;
@@ -108,213 +110,31 @@
             text-align: center;
         }
         .shift-table th { background-color: #2a2a2a; color: #aaa; }
-        .extra-input, .hours-input {
+        .extra-input {
             width: 55px;
             padding: 4px;
             margin: 0;
             text-align: center;
         }
-        .select-turno {
-            padding: 4px;
-            background: #2a2a2a;
-            color: #fff;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-        }
+        .badge-riposo { color: #ef4444; font-weight: bold; }
+        .badge-lavoro { color: #60a5fa; font-weight: bold; }
         #statusMessage {
             font-size: 0.85rem;
-            color: var(--success-color);
+            color: var(--warning-color);
             margin-top: 8px;
             text-align: center;
             font-weight: bold;
+            word-break: break-word;
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Archivio Turni - Aviapartner</h1>
-    <div class="subtitle">Gestione Mensile e Monte Ore</div>
+    <h1>Lettore PDF Turni Aviapartner</h1>
+    <div class="subtitle">Estrattore Reale e Calcolo Monte Ore</div>
 
-    <!-- SELEZIONE UTENTE E MESE -->
+    <!-- CARICAMENTO E NOME UTENTE -->
     <div class="card">
-        <label for="workerName">Nome e Cognome del Dipendente</label>
-        <input type="text" id="workerName" value="" placeholder="Scrivi il tuo nome..." onchange="caricaMese()">
-
-        <label for="monthSelect">Seleziona Mese</label>
-        <select id="monthSelect" onchange="caricaMese()">
-            <option value="2026-10">Ottobre 2026</option>
-            <option value="2026-11" selected>Novembre 2026</option>
-            <option value="2026-12">Dicembre 2026</option>
-            <option value="2027-01">Gennaio 2027</option>
-            <option value="2027-02">Febbraio 2027</option>
-            <option value="2027-03">Marzo 2027</option>
-        </select>
-
-        <button class="btn" onclick="generaMesePredefinito()">Genera / Inizializza Giorni del Mese</button>
-        <div id="statusMessage">Seleziona il mese e clicca per caricare la griglia.</div>
-    </div>
-
-    <!-- RIEPILOGO ORE -->
-    <div class="card">
-        <h3 id="tableTitle" style="margin:0; font-size:1rem; color:#fff;">Monte Ore Mese</h3>
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie</div>
-                <div class="stat-value" id="totalBaseHours">0 h</div>
-            </div>
-            <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Totale + Straordinari</div>
-                <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
-            </div>
-        </div>
-
-        <table class="shift-table">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Turno</th>
-                    <th>Ore</th>
-                    <th>Extra</th>
-                    <th>Tot</th>
-                </tr>
-            </thead>
-            <tbody id="shiftTableBody">
-                <tr><td colspan="5" style="color:#666;">Inserisci il nome e genera il mese.</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    let databaseTurni = JSON.parse(localStorage.getItem('aviapartner_archivio_definitivo')) || {};
-
-    function getChiave() {
-        const nome = document.getElementById('workerName').value.trim().toUpperCase();
-        const mese = document.getElementById('monthSelect').value;
-        return (nome ? nome : 'COLLEGA') + '_' + mese;
-    }
-
-    function generaMesePredefinito() {
-        const nome = document.getElementById('workerName').value.trim();
-        if (!nome) {
-            alert('Inserisci prima il tuo nome e cognome!');
-            document.getElementById('workerName').focus();
-            return;
-        }
-
-        const chiave = getChiave();
-        const selectMese = document.getElementById('monthSelect');
-        const [annoStr, meseStr] = selectMese.value.split('-');
-        let anno = parseInt(annoStr);
-        let mese = parseInt(meseStr) - 1;
-
-        let giorniNelMese = new Date(anno, mese + 1, 0).getDate();
-        let giorniSettimana = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-
-        let arrayGiorni = [];
-        for (let d = 1; d <= giorniNelMese; d++) {
-            let dataCorrente = new Date(anno, mese, d);
-            let nomeGiorno = giorniSettimana[dataCorrente.getDay()];
-            let dataFormattata = `${nomeGiorno} ${String(d).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}`;
-            
-            // Di default mettiamo 7 ore o riposo nei weekend come base
-            let isWeekend = (dataCorrente.getDay() === 0 || dataCorrente.getDay() === 6);
-            arrayGiorni.push({
-                date: dataFormattata,
-                turno: isWeekend ? 'RIP' : 'Mattina (7h)',
-                ore: isWeekend ? 0 : 7,
-                extra: 0
-            });
-        }
-
-        databaseTurni[chiave] = arrayGiorni;
-        salvaEVisualizza();
-        document.getElementById('statusMessage').innerText = "Griglia del mese generata con successo!";
-    }
-
-    function caricaMese() {
-        salvaEVisualizza();
-    }
-
-    function salvaEVisualizza() {
-        const chiave = getChiave();
-        const tbody = document.getElementById('shiftTableBody');
-        tbody.innerHTML = '';
-
-        const selectMese = document.getElementById('monthSelect');
-        document.getElementById('tableTitle').innerText = `Monte Ore - ${selectMese.options[selectMese.selectedIndex].text}`;
-
-        if (!databaseTurni[chiave] || databaseTurni[chiave].length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="color:#666;">Nessun dato per questo utente/mese. Clicca il pulsante sopra.</td></tr>';
-            document.getElementById('totalBaseHours').innerText = '0 h';
-            document.getElementById('totalFinalHours').innerText = '0 h';
-            return;
-        }
-
-        let turni = databaseTurni[chiave];
-        let totBase = 0;
-        let totExtra = 0;
-
-        turni.forEach((item, index) => {
-            let b = parseFloat(item.ore) || 0;
-            let e = parseFloat(item.extra) || 0;
-            totBase += b;
-            totExtra += e;
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${item.date}</strong></td>
-                <td>
-                    <select class="select-turno" onchange="aggiornaTurno(${index}, this.value)">
-                        <option value="Mattina (7h)" ${item.turno.includes('Mattina') ? 'selected' : ''}>Mattina</option>
-                        <option value="Pomeriggio (7h)" ${item.turno.includes('Pomeriggio') ? 'selected' : ''}>Pomeriggio</option>
-                        <option value="Notte (8h)" ${item.turno.includes('Notte') ? 'selected' : ''}>Notte</option>
-                        <option value="RIP" ${item.turno === 'RIP' ? 'selected' : ''}>RIPOSO</option>
-                        <option value="Altro" ${!['Mattina', 'Pomeriggio', 'Notte', 'RIP'].some(t => item.turno.includes(t)) ? 'selected' : ''}>Altro</option>
-                    </select>
-                </td>
-                <td><input type="number" class="hours-input" value="${b}" step="0.5" onchange="aggiornaOre(${index}, this.value)"></td>
-                <td><input type="number" class="extra-input" value="${e}" step="0.5" onchange="aggiornaExtra(${index}, this.value)"></td>
-                <td><strong>${b + e}h</strong></td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        document.getElementById('totalBaseHours').innerText = totBase + ' h';
-        document.getElementById('totalFinalHours').innerText = (totBase + totExtra) + ' h';
-
-        localStorage.setItem('aviapartner_archivio_definitivo', JSON.stringify(databaseTurni));
-    }
-
-    function aggiornaTurno(index, val) {
-        const chiave = getChiave();
-        databaseTurni[chiave][index].turno = val;
-        if (val === 'RIP') {
-            databaseTurni[chiave][index].ore = 0;
-        } else if (val.includes('Notte')) {
-            databaseTurni[chiave][index].ore = 8;
-        } else {
-            databaseTurni[chiave][index].ore = 7;
-        }
-        salvaEVisualizza();
-    }
-
-    function aggiornaOre(index, val) {
-        const chiave = getChiave();
-        databaseTurni[chiave][index].ore = parseFloat(val) || 0;
-        salvaEVisualizza();
-    }
-
-    function aggiornaExtra(index, val) {
-        const chiave = getChiave();
-        databaseTurni[chiave][index].extra = parseFloat(val) || 0;
-        salvaEVisualizza();
-    }
-
-    // Caricamento iniziale
-    caricaMese();
-</script>
-
-</body>
-</html>
+        <label for="workerName">Nome e/o Cognome Dipendente</label>
+        <input type="text" id="workerName" value="" placeholder
