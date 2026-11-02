@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Archivio Turni - Aviapartner</title>
-    <!-- pdf.js ufficiale -->
+    <title>Gestione Turni - Rocchini Andrea - Aviapartner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -15,11 +14,8 @@
             --card-bg: #1e1e1e;
             --text-color: #e0e0e0;
             --accent-color: #2563eb;
-            --accent-hover: #1d4ed8;
-            --border-color: #333;
             --success-color: #10b981;
-            --warning-color: #f59e0b;
-            --error-color: #ef4444;
+            --border-color: #333;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -30,139 +26,39 @@
             display: flex;
             justify-content: center;
         }
-        .container {
-            width: 100%;
-            max-width: 600px;
-        }
-        h1 {
-            font-size: 1.3rem;
-            margin: 0 0 4px 0;
-            text-align: center;
-            color: #fff;
-        }
-        .subtitle {
-            font-size: 0.8rem;
-            text-align: center;
-            color: #888;
-            margin-bottom: 15px;
-        }
-        .card {
-            background-color: var(--card-bg);
-            border: 1px solid var(--border-color);
-            border-radius: 10px;
-            padding: 14px;
-            margin-bottom: 12px;
-        }
-        label {
-            display: block;
-            font-size: 0.85rem;
-            margin-bottom: 4px;
-            color: #aaa;
-        }
-        input, select {
-            width: 100%;
-            padding: 10px;
-            background-color: #2a2a2a;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            color: #fff;
-            font-size: 0.95rem;
-            box-sizing: border-box;
-            margin-bottom: 10px;
-        }
-        .btn {
-            width: 100%;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 6px;
-            font-size: 0.95rem;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        .btn:hover { background-color: var(--accent-hover); }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 10px;
-        }
-        .stat-box {
-            background-color: #262626;
-            border: 1px solid var(--border-color);
-            padding: 10px;
-            border-radius: 6px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--success-color);
-            margin-top: 2px;
-        }
-        .shift-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 0.85rem;
-        }
-        .shift-table th, .shift-table td {
-            border: 1px solid var(--border-color);
-            padding: 8px 6px;
-            text-align: center;
-        }
+        .container { width: 100%; max-width: 650px; }
+        h1 { font-size: 1.3rem; margin: 0 0 4px 0; text-align: center; color: #fff; }
+        .subtitle { font-size: 0.8rem; text-align: center; color: #888; margin-bottom: 15px; }
+        .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 10px; padding: 14px; margin-bottom: 12px; }
+        label { display: block; font-size: 0.85rem; margin-bottom: 4px; color: #aaa; }
+        input, select { width: 100%; padding: 10px; background-color: #2a2a2a; border: 1px solid var(--border-color); border-radius: 6px; color: #fff; font-size: 0.95rem; box-sizing: border-box; margin-bottom: 10px; }
+        .btn { width: 100%; background-color: var(--accent-color); color: white; border: none; padding: 12px; border-radius: 6px; font-size: 0.95rem; font-weight: bold; cursor: pointer; }
+        .btn:hover { background-color: #1d4ed8; }
+        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+        .stat-box { background-color: #262626; border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; text-align: center; }
+        .stat-value { font-size: 1.3rem; font-weight: bold; color: var(--success-color); margin-top: 2px; }
+        .shift-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.85rem; }
+        .shift-table th, .shift-table td { border: 1px solid var(--border-color); padding: 8px 6px; text-align: center; }
         .shift-table th { background-color: #2a2a2a; color: #aaa; }
-        .extra-input {
-            width: 55px;
-            padding: 4px;
-            margin: 0;
-            text-align: center;
-        }
-        .badge-riposo { color: #ef4444; font-weight: bold; font-style: italic; }
-        .badge-lavoro { color: #60a5fa; font-weight: bold; }
-        #debugConsole {
-            background: #000;
-            border: 1px solid var(--border-color);
-            border-radius: 6px;
-            padding: 10px;
-            font-family: monospace;
-            font-size: 0.75rem;
-            color: #00ff00;
-            max-height: 120px;
-            overflow-y: auto;
-            margin-top: 10px;
-            white-space: pre-wrap;
-        }
+        .extra-input { width: 55px; padding: 4px; text-align: center; }
+        #statusMessage { font-size: 0.85rem; color: #f59e0b; margin-top: 8px; text-align: center; font-weight: bold; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>Archivio Turni - Aviapartner</h1>
-    <div class="subtitle">Estrattore Reale PDF & Monte Ore</div>
+    <h1>Gestione Turni - Rocchini Andrea</h1>
+    <div class="subtitle">Lettura Tabellone PDF & Calcolo Monte Ore Reale</div>
 
-    <!-- SELEZIONE UTENTE, MESE E CARICAMENTO PDF -->
     <div class="card">
-        <label for="workerName">Cognome e Nome (es. ROCCHINI ANDREA)</label>
-        <input type="text" id="workerName" value="ROCCHINI ANDREA" placeholder="Es. ROCCHINI ANDREA">
+        <label for="workerName">Dipendente da Estrarre</label>
+        <input type="text" id="workerName" value="ROCCHINI ANDREA">
 
-        <label for="monthSelect">Seleziona Mese</label>
-        <select id="monthSelect" onchange="caricaTabellaMese()">
-            <option value="2026-10">Ottobre 2026</option>
-            <option value="2026-11" selected>Novembre 2026</option>
-            <option value="2026-12">Dicembre 2026</option>
-            <option value="2027-01">Gennaio 2027</option>
-            <option value="2027-02">Febbraio 2027</option>
-        </select>
-
-        <label for="pdfFile">File PDF Turni Mensili</label>
+        <label for="pdfFile">Carica il PDF Ufficiale di Novembre 2026</label>
         <input type="file" id="pdfFile" accept="application/pdf">
 
-        <button class="btn" onclick="analizzaPDFIntelligente()">Analizza PDF e Carica Turni</button>
-        
-        <label style="margin-top: 10px;">Diagnostica:</label>
-        <div id="debugConsole">Pronto per la lettura del file...</div>
+        <button class="btn" onclick="estraiTurniRocchini()">Estrai Turni Reali dal PDF</button>
+        <div id="statusMessage">Carica il PDF e premi il pulsante.</div>
     </div>
 
     <!-- MODIFICA MANUALE / STRAORDINARI -->
@@ -170,33 +66,33 @@
         <details>
             <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Modifica Turno o Aggiungi Straordinario</summary>
             <div style="margin-top:10px;">
-                <label for="manualDate">Data o Giorno (es. Lun 02/11)</label>
-                <input type="text" id="manualDate" placeholder="Es. Lun 02/11">
+                <label for="manualDate">Giorno (es. Dom 01/11)</label>
+                <input type="text" id="manualDate" placeholder="Es. Dom 01/11">
                 
-                <label for="manualLabel">Descrizione Turno</label>
-                <input type="text" id="manualLabel" value="07:00 - 14:00" placeholder="Es. 07:00-14:00, RIP">
+                <label for="manualLabel">Orario Turno</label>
+                <input type="text" id="manualLabel" value="08:00 - 16:00" placeholder="Es. 08:00 - 16:00, RIP">
 
                 <label for="manualHours">Ore Ordinarie</label>
-                <input type="number" id="manualHours" value="7" step="0.5">
+                <input type="number" id="manualHours" value="8" step="0.5">
 
                 <label for="manualExtra">Straordinario (h)</label>
                 <input type="number" id="manualExtra" value="0" step="0.5">
 
-                <button class="btn" onclick="salvaModificaManuale()">Aggiorna Giorno</button>
+                <button class="btn" onclick="salvaModificaManuale()">Aggiorna Turno</button>
             </div>
         </details>
     </div>
 
     <!-- RIEPILOGO ORE -->
     <div class="card">
-        <h3 id="tableTitle" style="margin:0; font-size:1rem; color:#fff;">Monte Ore Mese</h3>
+        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Novembre 2026</h3>
         <div class="stats-grid">
             <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie (Base)</div>
+                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie (da PDF)</div>
                 <div class="stat-value" id="totalBaseHours">0 h</div>
             </div>
             <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Totale Complessivo (+ Extra)</div>
+                <div style="font-size:0.75rem; color:#aaa;">Totale + Straordinari</div>
                 <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
             </div>
         </div>
@@ -205,256 +101,87 @@
             <thead>
                 <tr>
                     <th>Data</th>
-                    <th>Turno PDF</th>
+                    <th>Turno Reale</th>
+                    <th>Ore</th>
                     <th>Extra (h)</th>
                     <th>Totale</th>
                 </tr>
             </thead>
             <tbody id="shiftTableBody">
-                <tr><td colspan="4" style="color:#666;">Nessun turno in memoria. Carica il PDF.</td></tr>
+                <tr><td colspan="5" style="color:#666;">Nessun turno in memoria. Carica il PDF.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    let databaseArchivio = JSON.parse(localStorage.getItem('aviapartner_pdf_smart_v8')) || {};
+    let turniData = JSON.parse(localStorage.getItem('rocchini_turni_nov_2026')) || [];
 
-    function writeLog(msg) {
-        const consoleEl = document.getElementById('debugConsole');
-        consoleEl.innerText += "\n> " + msg;
-        consoleEl.scrollTop = consoleEl.scrollHeight;
-    }
-
-    function clearLog() {
-        document.getElementById('debugConsole').innerText = "> Avvio analisi intelligente...";
-    }
-
-    function getChiaveDB() {
-        const nome = document.getElementById('workerName').value.trim().toUpperCase();
-        const mese = document.getElementById('monthSelect').value;
-        return (nome ? nome : 'OSPITE') + '_' + mese;
-    }
-
-    function caricaTabellaMese() {
-        const chiave = getChiaveDB();
-        if (!databaseArchivio[chiave]) databaseArchivio[chiave] = [];
-
-        const turni = databaseArchivio[chiave];
+    function aggiornaTabella() {
+        localStorage.setItem('rocchini_turni_nov_2026', JSON.stringify(turniData));
         const tbody = document.getElementById('shiftTableBody');
         tbody.innerHTML = '';
 
         let baseTotal = 0;
         let extraTotal = 0;
 
-        const selectMese = document.getElementById('monthSelect');
-        document.getElementById('tableTitle').innerText = `Monte Ore - ${selectMese.options[selectMese.selectedIndex].text}`;
-
-        if (turni.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno presente per questo mese.</td></tr>';
+        if (turniData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="color:#666;">Nessun turno inserito. Carica il PDF sopra.</td></tr>';
             document.getElementById('totalBaseHours').innerText = '0 h';
             document.getElementById('totalFinalHours').innerText = '0 h';
             return;
         }
 
-        turni.forEach((item, index) => {
+        turniData.forEach((item, index) => {
+            const b = parseFloat(item.baseHours) || 0;
+            const e = parseFloat(item.extraHours) || 0;
+            baseTotal += b;
+            extraTotal += e;
+
             const row = document.createElement('tr');
-            const dayBase = parseFloat(item.baseHours) || 0;
-            const dayExtra = parseFloat(item.extraHours) || 0;
-            const dayTotal = dayBase + dayExtra;
-
-            baseTotal += dayBase;
-            extraTotal += dayExtra;
-
-            const isRiposo = dayBase === 0;
-
             row.innerHTML = `
                 <td><strong>${item.date}</strong></td>
-                <td class="${isRiposo ? 'badge-riposo' : 'badge-lavoro'}">${item.label} (${dayBase}h)</td>
+                <td>${item.label}</td>
+                <td>${b}h</td>
                 <td>
-                    <input type="number" class="extra-input" value="${dayExtra}" step="0.5" onchange="aggiornaExtra(${index}, this.value)">
+                    <input type="number" class="extra-input" value="${e}" step="0.5" onchange="aggiornaExtra(${index}, this.value)">
                 </td>
-                <td><strong>${dayTotal} h</strong></td>
+                <td><strong>${b + e} h</strong></td>
             `;
             tbody.appendChild(row);
         });
 
         document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
         document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
-        
-        localStorage.setItem('aviapartner_pdf_smart_v8', JSON.stringify(databaseArchivio));
     }
 
-    async function analizzaPDFIntelligente() {
-        clearLog();
+    async function estraiTurniRocchini() {
         const fileInput = document.getElementById('pdfFile');
-        const queryCognome = document.getElementById('workerName').value.trim().toUpperCase();
+        const workerQuery = document.getElementById('workerName').value.trim().toUpperCase();
+        const status = document.getElementById('statusMessage');
 
-        if (!queryCognome) {
-            alert('Inserisci il nome o cognome.');
-            return;
-        }
         if (!fileInput.files[0]) {
-            alert('Seleziona prima il file PDF.');
+            alert('Seleziona il file PDF!');
             return;
         }
 
-        writeLog(`Ricerca mirata per: "${queryCognome}"`);
+        status.style.color = '#f59e0b';
+        status.innerText = "Analisi della riga di Rocchini Andrea in corso...";
 
         try {
             const file = fileInput.files[0];
             const arrayBuffer = await file.arrayBuffer();
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
             const pdf = await loadingTask.promise;
-            writeLog(`Pagine PDF totali: ${pdf.numPages}`);
+            const page = await pdf.getPage(1);
+            const textContent = await page.getTextContent();
 
-            let rigaTrovata = null;
-
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                const textContent = await page.getTextContent();
-                
-                let righeMappa = {};
-                textContent.items.forEach(item => {
-                    let textStr = item.str.trim();
-                    if (!textStr) return;
-
-                    let y = Math.round(item.transform[5]);
-                    let x = Math.round(item.transform[4]);
-
-                    let yChiave = Object.keys(righeMappa).find(k => Math.abs(k - y) <= 5);
-                    if (!yChiave) {
-                        yChiave = y;
-                        righeMappa[yChiave] = [];
-                    }
-                    righeMappa[yChiave].push({ x: x, str: textStr });
-                });
-
-                Object.keys(righeMappa).forEach(y => {
-                    righeMappa[y].sort((a, b) => a.x - b.x);
-                    let testoRiga = righeMappa[y].map(e => e.str).join(' ');
-                    
-                    // Controllo rigoroso sul nome/cognome inserito
-                    if (testoRiga.toUpperCase().includes(queryCognome)) {
-                        rigaTrovata = righeMappa[y];
-                        writeLog(`Trovata riga esatta a Pagina ${pageNum}!`);
-                    }
-                });
-
-                if (rigaTrovata) break;
-            }
-
-            if (!rigaTrovata) {
-                writeLog(`ERRORE: Impossibile trovare "${queryCognome}" nel file.`);
-                alert(`Impossibile trovare "${queryCognome}". Assicurati di aver scritto esattamente il cognome (es. ROCCHINI).`);
-                return;
-            }
-
-            // Calcola quanti giorni ha ESATTAMENTE il mese selezionato (es. Novembre = 30)
-            const selectMeseVal = document.getElementById('monthSelect').value; // es. "2026-11"
-            let [annoStr, meseStr] = selectMeseVal.split('-');
-            let anno = parseInt(annoStr);
-            let mese = parseInt(meseStr) - 1;
-            
-            let giorniNelMese = new Date(anno, mese + 1, 0).getDate();
-            writeLog(`Mese selezionato: ${selectMeseVal} (${giorniNelMese} giorni totali).`);
-
-            // Estrae solo gli elementi dopo il nome e prende ESATTAMENTE il numero di giorni del mese
-            let elementiRiga = rigaTrovata.map(e => e.str);
-            let indiceNome = elementiRiga.findIndex(e => e.toUpperCase().includes(queryCognome));
-            
-            let tokenTurni = [];
-            if (indiceNome >= 0) {
-                tokenTurni = elementiRiga.slice(indiceNome + 1);
-            } else {
-                tokenTurni = elementiRiga;
-            }
-
-            // Taglia rigorosamente al numero di giorni del mese (es. max 30 per novembre)
-            tokenTurni = tokenTurni.slice(0, giorniNelMese);
-            writeLog(`Token turno estratti e limitati a ${tokenTurni.length} giorni.`);
-
-            let turniFinali = [];
-            let giorniSettimana = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
-
-            for (let i = 0; i < giorniNelMese; i++) {
-                let giornoNum = i + 1;
-                let tok = (tokenTurni[i] ? tokenTurni[i].toUpperCase() : "7");
-
-                let ore = 7;
-                let etichetta = tok;
-
-                if (tok === 'R' || tok === 'RIP' || tok === 'OFF' || tok === 'LIB' || tok.includes('RIP')) {
-                    ore = 0;
-                    etichetta = 'RIPOSO';
-                } else if (tok.match(/\d{1,2}[:.-]\d{2}/) || tok.match(/\d{2}-\d{2}/)) {
-                    ore = 7;
-                } else if (!isNaN(tok.replace(',', '.')) && parseFloat(tok.replace(',', '.')) <= 12) {
-                    ore = parseFloat(tok.replace(',', '.'));
-                    etichetta = ore + ' Ore';
+            let items = [];
+            textContent.items.forEach(item => {
+                let str = item.str.trim();
+                if (str) {
+                    items.push({ text: str, x: item.transform[4], y: item.transform[5] });
                 }
+            });
 
-                let dTemp = new Date(anno, mese, giornoNum);
-                let nomeGiorno = giorniSettimana[dTemp.getDay()];
-                let dataFormatted = `${nomeGiorno} ${String(giornoNum).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}`;
-
-                turniFinali.push({
-                    date: dataFormatted,
-                    label: etichetta,
-                    baseHours: ore,
-                    extraHours: 0
-                });
-            }
-
-            const chiave = getChiaveDB();
-            databaseArchivio[chiave] = turniFinali;
-
-            writeLog(`SUCCESSO! Caricati esattamente ${turniFinali.length} giorni.`);
-            caricaTabellaMese();
-
-        } catch (err) {
-            writeLog("ERRORE CRITICO: " + err.message);
-            console.error(err);
-        }
-    }
-
-    function aggiornaExtra(idx, val) {
-        const chiave = getChiaveDB();
-        if (databaseArchivio[chiave] && databaseArchivio[chiave][idx]) {
-            databaseArchivio[chiave][idx].extraHours = parseFloat(val) || 0;
-            caricaTabellaMese();
-        }
-    }
-
-    function salvaModificaManuale() {
-        const d = document.getElementById('manualDate').value;
-        const l = document.getElementById('manualLabel').value;
-        const h = parseFloat(document.getElementById('manualHours').value) || 0;
-        const e = parseFloat(document.getElementById('manualExtra').value) || 0;
-
-        if (!d) {
-            alert('Inserisci la data.');
-            return;
-        }
-
-        const chiave = getChiaveDB();
-        if (!databaseArchivio[chiave]) databaseArchivio[chiave] = [];
-
-        const idx = databaseArchivio[chiave].findIndex(item => item.date.toLowerCase().includes(d.toLowerCase()));
-        if (idx >= 0) {
-            databaseArchivio[chiave][idx].label = l;
-            databaseArchivio[chiave][idx].baseHours = h;
-            databaseArchivio[chiave][idx].extraHours = e;
-        } else {
-            databaseArchivio[chiave].push({ date: d, label: l, baseHours: h, extraHours: e });
-        }
-
-        caricaTabellaMese();
-        writeLog("Aggiornato manualmente: " + d);
-    }
-
-    caricaTabellaMese();
-</script>
-
-</body>
-</html>
+            // Trova la riga vic
