@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Turni Mensili - Aviapartner</title>
-    <!-- Libreria ufficiale PDF.js per lettura PDF da browser -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <title>Gestione Turni - Aviapartner</title>
     <style>
         :root {
             --bg-color: #121212;
@@ -64,3 +62,250 @@
             color: #fff;
             font-size: 0.95rem;
             box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        .btn {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .btn:hover { background-color: var(--accent-hover); }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stat-box {
+            background-color: #262626;
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: var(--success-color);
+            margin-top: 2px;
+        }
+        .shift-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.85rem;
+        }
+        .shift-table th, .shift-table td {
+            border: 1px solid var(--border-color);
+            padding: 8px 6px;
+            text-align: center;
+        }
+        .shift-table th { background-color: #2a2a2a; color: #aaa; }
+        .extra-input {
+            width: 55px;
+            padding: 4px;
+            margin: 0;
+            text-align: center;
+        }
+        .badge-riposo { color: #888; font-style: italic; }
+        .badge-lavoro { color: #60a5fa; font-weight: bold; }
+        #statusMessage {
+            font-size: 0.85rem;
+            color: var(--warning-color);
+            margin-top: 8px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Turni & Ore Mensili</h1>
+    <div class="subtitle">Aviapartner - Gestione Operativa</div>
+
+    <!-- CONFIGURAZIONE UTENTE -->
+    <div class="card">
+        <label for="workerName">Operatore</label>
+        <input type="text" id="workerName" value="Andrea Rocchini" placeholder="Nome e Cognome">
+
+        <label for="monthSelect">Seleziona Mese</label>
+        <select id="monthSelect" onchange="generateMonthTemplate()">
+            <option value="2026-11">Novembre 2026</option>
+            <option value="2026-12">Dicembre 2026</option>
+            <option value="2027-01">Gennaio 2027</option>
+        </select>
+
+        <button class="btn" onclick="generateMonthTemplate()">Rigenera / Carica Griglia Mese</button>
+        <div id="statusMessage">Griglia pronta. Puoi modificare i turni o aggiungere straordinari.</div>
+    </div>
+
+    <!-- AGGIUNTA TURNO SINGOLO O STRAORDINARIO -->
+    <div class="card">
+        <details>
+            <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Aggiungi Giorno o Straordinario Rapido</summary>
+            <div style="margin-top:10px;">
+                <label for="manualDate">Data</label>
+                <input type="date" id="manualDate">
+                
+                <label for="manualLabel">Tipo Turno</label>
+                <input type="text" id="manualLabel" value="Mattina (7h)" placeholder="Es. Mattina, Pomeriggio, Notte">
+
+                <label for="manualHours">Ore Ordinarie</label>
+                <input type="number" id="manualHours" value="7" step="0.5">
+
+                <label for="manualExtra">Straordinario (h)</label>
+                <input type="number" id="manualExtra" value="0" step="0.5">
+
+                <button class="btn" onclick="addManualDay()">Registra / Aggiorna Giorno</button>
+            </div>
+        </details>
+    </div>
+
+    <!-- RIEPILOGO ORE -->
+    <div class="card">
+        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Complessivo</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Ore Pianificate (Base)</div>
+                <div class="stat-value" id="totalBaseHours">0 h</div>
+            </div>
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Ore Totali (+ Straordinari)</div>
+                <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
+            </div>
+        </div>
+
+        <!-- GRIGLIA TURNI -->
+        <table class="shift-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Turno</th>
+                    <th>Extra (h)</th>
+                    <th>Totale</th>
+                </tr>
+            </thead>
+            <tbody id="shiftTableBody">
+                <!-- I dati vengono inseriti qui -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let monthlyData = JSON.parse(localStorage.getItem('aviapartner_clean_shifts')) || [];
+
+    function generateMonthTemplate() {
+        if (monthlyData.length === 0) {
+            // Genera un mese di prova predefinito se vuoto
+            for (let d = 1; d <= 30; d++) {
+                let dayStr = `2026-11-${d < 10 ? '0' + d : d}`;
+                let isRiposo = (d % 6 === 0);
+                monthlyData.push({
+                    date: dayStr,
+                    label: isRiposo ? 'Riposo' : 'Mattina (7h)',
+                    baseHours: isRiposo ? 0 : 7,
+                    extraHours: 0
+                });
+            }
+        }
+        saveAndRender();
+        document.getElementById('statusMessage').innerText = "Tabellone caricato correttamente.";
+    }
+
+    function saveAndRender() {
+        localStorage.setItem('aviapartner_clean_shifts', JSON.stringify(monthlyData));
+        const tbody = document.getElementById('shiftTableBody');
+        tbody.innerHTML = '';
+
+        let baseTotal = 0;
+        let extraTotal = 0;
+
+        if (monthlyData.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno in memoria.</td></tr>';
+            document.getElementById('totalBaseHours').innerText = '0 h';
+            document.getElementById('totalFinalHours').innerText = '0 h';
+            return;
+        }
+
+        // Ordina per data
+        monthlyData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        monthlyData.forEach((item, index) => {
+            const row = document.createElement('tr');
+            
+            const dayBase = parseFloat(item.baseHours) || 0;
+            const dayExtra = parseFloat(item.extraHours) || 0;
+            const dayTotal = dayBase + dayExtra;
+
+            baseTotal += dayBase;
+            extraTotal += dayExtra;
+
+            const isRiposo = dayBase === 0 && dayExtra === 0;
+
+            row.innerHTML = `
+                <td><strong>${item.date}</strong></td>
+                <td class="${isRiposo ? 'badge-riposo' : 'badge-lavoro'}">${item.label} (${dayBase}h)</td>
+                <td>
+                    <input type="number" class="extra-input" value="${dayExtra}" step="0.5" onchange="updateExtra(${index}, this.value)">
+                </td>
+                <td><strong>${dayTotal} h</strong></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
+        document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
+    }
+
+    function updateExtra(index, value) {
+        monthlyData[index].extraHours = parseFloat(value) || 0;
+        saveAndRender();
+    }
+
+    function addManualDay() {
+        const dateVal = document.getElementById('manualDate').value;
+        const labelVal = document.getElementById('manualLabel').value;
+        const hoursVal = parseFloat(document.getElementById('manualHours').value) || 0;
+        const extraVal = parseFloat(document.getElementById('manualExtra').value) || 0;
+
+        if (!dateVal) {
+            alert('Inserisci una data valida.');
+            return;
+        }
+
+        // Cerca se esiste già la data per aggiornarla
+        const existingIndex = monthlyData.findIndex(item => item.date === dateVal);
+        if (existingIndex >= 0) {
+            monthlyData[existingIndex].label = labelVal;
+            monthlyData[existingIndex].baseHours = hoursVal;
+            monthlyData[existingIndex].extraHours = extraVal;
+        } else {
+            monthlyData.push({
+                date: dateVal,
+                label: labelVal,
+                baseHours: hoursVal,
+                extraHours: extraVal
+            });
+        }
+
+        saveAndRender();
+        document.getElementById('statusMessage').innerText = "Turno aggiornato con successo!";
+    }
+
+    // Avvio automatico
+    if (monthlyData.length === 0) {
+        generateMonthTemplate();
+    } else {
+        saveAndRender();
+    }
+</script>
+
+</body>
+</html>
