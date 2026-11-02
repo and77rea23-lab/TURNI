@@ -4,8 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archivio Turni - Aviapartner</title>
-    <!-- Libreria ufficiale PDF.js -->
+    <!-- pdf.js caricato da CDN affidabile -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     <style>
         :root {
             --bg-color: #121212;
@@ -118,12 +121,18 @@
         }
         .badge-riposo { color: #ef4444; font-weight: bold; font-style: italic; }
         .badge-lavoro { color: #60a5fa; font-weight: bold; }
-        #statusMessage {
-            font-size: 0.85rem;
-            color: var(--warning-color);
-            margin-top: 8px;
-            text-align: center;
-            font-weight: bold;
+        #debugConsole {
+            background: #000;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            color: #00ff00;
+            max-height: 150px;
+            overflow-y: auto;
+            margin-top: 10px;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -131,28 +140,29 @@
 
 <div class="container">
     <h1>Archivio Turni - Aviapartner</h1>
-    <div class="subtitle">Lettura Tabellone PDF & Gestione Monte Ore</div>
+    <div class="subtitle">Estrattore PDF Aziendale & Monte Ore</div>
 
     <!-- SELEZIONE UTENTE, MESE E CARICAMENTO PDF -->
     <div class="card">
-        <label for="workerName">Nome e Cognome del Dipendente</label>
-        <input type="text" id="workerName" value="" placeholder="Inserisci il tuo nome o cognome (es. ROCCHINI)">
+        <label for="workerName">Cognome o Nome da cercare nel PDF</label>
+        <input type="text" id="workerName" value="" placeholder="Es. ROCCHINI oppure Andrea">
 
-        <label for="monthSelect">Seleziona Mese di Riferimento</label>
+        <label for="monthSelect">Seleziona Mese</label>
         <select id="monthSelect" onchange="caricaTabellaMese()">
             <option value="2026-10">Ottobre 2026</option>
             <option value="2026-11" selected>Novembre 2026</option>
             <option value="2026-12">Dicembre 2026</option>
             <option value="2027-01">Gennaio 2027</option>
             <option value="2027-02">Febbraio 2027</option>
-            <option value="2027-03">Marzo 2027</option>
         </select>
 
-        <label for="pdfFile">Carica il File PDF del Turno Mensile</label>
+        <label for="pdfFile">File PDF Turni Mensili</label>
         <input type="file" id="pdfFile" accept="application/pdf">
 
-        <button class="btn" onclick="leggiPDFEstraiTurni()">Analizza PDF e Carica Turni</button>
-        <div id="statusMessage">Inserisci il nome, seleziona il mese e carica il PDF aziendale.</div>
+        <button class="btn" onclick="analizzaPDFConDiagnostica()">Analizza PDF e Carica Turni</button>
+        
+        <label style="margin-top: 10px;">Stato Analisi (Diagnostica):</label>
+        <div id="debugConsole">In attesa del caricamento file PDF...</div>
     </div>
 
     <!-- AGGIUNTA O MODIFICA MANUALE / STRAORDINARI -->
@@ -164,4 +174,280 @@
                 <input type="text" id="manualDate" placeholder="Es. Lun 02/11">
                 
                 <label for="manualLabel">Descrizione Turno</label>
-                <input type="text" id="
+                <input type="text" id="manualLabel" value="07:00 - 14:00" placeholder="Es. 07:00-14:00, RIP">
+
+                <label for="manualHours">Ore Ordinarie</label>
+                <input type="number" id="manualHours" value="7" step="0.5">
+
+                <label for="manualExtra">Straordinario (h)</label>
+                <input type="number" id="manualExtra" value="0" step="0.5">
+
+                <button class="btn" onclick="salvaModificaManuale()">Aggiorna Giorno</button>
+            </div>
+        </details>
+    </div>
+
+    <!-- RIEPILOGO ORE -->
+    <div class="card">
+        <h3 id="tableTitle" style="margin:0; font-size:1rem; color:#fff;">Monte Ore Mese</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie (Base)</div>
+                <div class="stat-value" id="totalBaseHours">0 h</div>
+            </div>
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Totale Complessivo (+ Extra)</div>
+                <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
+            </div>
+        </div>
+
+        <table class="shift-table">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Turno PDF</th>
+                    <th>Extra (h)</th>
+                    <th>Totale</th>
+                </tr>
+            </thead>
+            <tbody id="shiftTableBody">
+                <tr><td colspan="4" style="color:#666;">Nessun turno in memoria. Carica il PDF.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    let databaseArchivio = JSON.parse(localStorage.getItem('aviapartner_pdf_diag_v7')) || {};
+
+    function writeLog(msg) {
+        const consoleEl = document.getElementById('debugConsole');
+        consoleEl.innerText += "\n> " + msg;
+        consoleEl.scrollTop = consoleEl.scrollHeight;
+    }
+
+    function clearLog() {
+        document.getElementById('debugConsole').innerText = "> Inizio diagnostica...";
+    }
+
+    function getChiaveDB() {
+        const nome = document.getElementById('workerName').value.trim().toUpperCase();
+        const mese = document.getElementById('monthSelect').value;
+        return (nome ? nome : 'OSPITE') + '_' + mese;
+    }
+
+    function caricaTabellaMese() {
+        const chiave = getChiaveDB();
+        if (!databaseArchivio[chiave]) databaseArchivio[chiave] = [];
+
+        const turni = databaseArchivio[chiave];
+        const tbody = document.getElementById('shiftTableBody');
+        tbody.innerHTML = '';
+
+        let baseTotal = 0;
+        let extraTotal = 0;
+
+        const selectMese = document.getElementById('monthSelect');
+        document.getElementById('tableTitle').innerText = `Monte Ore - ${selectMese.options[selectMese.selectedIndex].text}`;
+
+        if (turni.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno presente per questo mese.</td></tr>';
+            document.getElementById('totalBaseHours').innerText = '0 h';
+            document.getElementById('totalFinalHours').innerText = '0 h';
+            return;
+        }
+
+        turni.forEach((item, index) => {
+            const row = document.createElement('tr');
+            const dayBase = parseFloat(item.baseHours) || 0;
+            const dayExtra = parseFloat(item.extraHours) || 0;
+            const dayTotal = dayBase + dayExtra;
+
+            baseTotal += dayBase;
+            extraTotal += dayExtra;
+
+            const isRiposo = dayBase === 0;
+
+            row.innerHTML = `
+                <td><strong>${item.date}</strong></td>
+                <td class="${isRiposo ? 'badge-riposo' : 'badge-lavoro'}">${item.label} (${dayBase}h)</td>
+                <td>
+                    <input type="number" class="extra-input" value="${dayExtra}" step="0.5" onchange="aggiornaExtra(${index}, this.value)">
+                </td>
+                <td><strong>${dayTotal} h</strong></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
+        document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
+        
+        localStorage.setItem('aviapartner_pdf_diag_v7', JSON.stringify(databaseArchivio));
+    }
+
+    async function analizzaPDFConDiagnostica() {
+        clearLog();
+        const fileInput = document.getElementById('pdfFile');
+        const queryNome = document.getElementById('workerName').value.trim().toUpperCase();
+
+        if (!queryNome) {
+            alert('Scrivi il Cognome o Nome nella casella prima di cliccare.');
+            writeLog("ERRORE: Campo Nome vuoto.");
+            return;
+        }
+        if (!fileInput.files[0]) {
+            alert('Seleziona prima un file PDF.');
+            writeLog("ERRORE: Nessun file PDF selezionato.");
+            return;
+        }
+
+        writeLog(`Ricerca dipendente: "${queryNome}"`);
+        writeLog(`File: ${fileInput.files[0].name}`);
+
+        try {
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            writeLog("Caricamento PDF in memoria...");
+
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+            writeLog(`PDF aperto correttamente. Pagine totali: ${pdf.numPages}`);
+
+            let testoTuttePagine = [];
+            let rigaTrovata = null;
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                
+                // Raggruppa gli elementi del testo per riga (coordinata Y con tolleranza 6px)
+                let righeMappa = {};
+                textContent.items.forEach(item => {
+                    let textStr = item.str.trim();
+                    if (!textStr) return;
+
+                    let y = Math.round(item.transform[5]);
+                    let x = Math.round(item.transform[4]);
+
+                    let yChiave = Object.keys(righeMappa).find(k => Math.abs(k - y) <= 6);
+                    if (!yChiave) {
+                        yChiave = y;
+                        righeMappa[yChiave] = [];
+                    }
+                    righeMappa[yChiave].push({ x: x, str: textStr });
+                });
+
+                // Ordina ogni riga da sinistra a destra
+                Object.keys(righeMappa).forEach(y => {
+                    righeMappa[y].sort((a, b) => a.x - b.x);
+                    let testoRiga = righeMappa[y].map(e => e.str).join(' ');
+                    
+                    if (testoRiga.toUpperCase().includes(queryNome)) {
+                        rigaTrovata = righeMappa[y];
+                        writeLog(`NOME TROVATO a Pagina ${pageNum}!`);
+                    }
+                });
+
+                if (rigaTrovata) break;
+            }
+
+            if (!rigaTrovata) {
+                writeLog(`ERRORE: "${queryNome}" NON trovato in nessuna pagina del PDF.`);
+                alert(`Impossibile trovare "${queryNome}" nel PDF. Verifica se nel file il cognome è scritto diversamente.`);
+                return;
+            }
+
+            // Isola i token trovati sulla riga del dipendente
+            let elementiTurno = rigaTrovata.map(e => e.str.toUpperCase()).filter(str => !str.includes(queryNome));
+            writeLog(`Elementi estratti dalla riga: ${elementiTurno.length}`);
+
+            let turniFinali = [];
+            const selectMese = document.getElementById('monthSelect').value;
+            let [annoStr, meseStr] = selectMese.split('-');
+            let anno = parseInt(annoStr);
+            let mese = parseInt(meseStr) - 1;
+            let giorniSettimana = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
+
+            let giornoProgressivo = 1;
+
+            elementiTurno.forEach(tok => {
+                let ore = 7;
+                let etichetta = tok;
+
+                if (tok === 'R' || tok === 'RIP' || tok === 'OFF' || tok === 'LIB' || tok.includes('RIP')) {
+                    ore = 0;
+                    etichetta = 'RIPOSO';
+                } else if (tok.match(/\d{1,2}[:.-]\d{2}/) || tok.match(/\d{2}-\d{2}/)) {
+                    ore = 7;
+                } else if (!isNaN(tok.replace(',', '.')) && parseFloat(tok.replace(',', '.')) <= 12) {
+                    ore = parseFloat(tok.replace(',', '.'));
+                    etichetta = ore + ' Ore';
+                }
+
+                let dTemp = new Date(anno, mese, giornoProgressivo);
+                let nomeGiorno = giorniSettimana[dTemp.getDay()];
+                let dataFormatted = `${nomeGiorno} ${String(giornoProgressivo).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}`;
+
+                turniFinali.push({
+                    date: dataFormatted,
+                    label: etichetta,
+                    baseHours: ore,
+                    extraHours: 0
+                });
+
+                giornoProgressivo++;
+            });
+
+            const chiave = getChiaveDB();
+            databaseArchivio[chiave] = turniFinali;
+
+            writeLog(`ESITO: Generati ${turniFinali.length} giorni di turno!`);
+            caricaTabellaMese();
+
+        } catch (err) {
+            writeLog("ECCEZIONE CRITICA: " + err.message);
+            console.error(err);
+        }
+    }
+
+    function aggiornaExtra(idx, val) {
+        const chiave = getChiaveDB();
+        if (databaseArchivio[chiave] && databaseArchivio[chiave][idx]) {
+            databaseArchivio[chiave][idx].extraHours = parseFloat(val) || 0;
+            caricaTabellaMese();
+        }
+    }
+
+    function salvaModificaManuale() {
+        const d = document.getElementById('manualDate').value;
+        const l = document.getElementById('manualLabel').value;
+        const h = parseFloat(document.getElementById('manualHours').value) || 0;
+        const e = parseFloat(document.getElementById('manualExtra').value) || 0;
+
+        if (!d) {
+            alert('Inserisci la data o il giorno.');
+            return;
+        }
+
+        const chiave = getChiaveDB();
+        if (!databaseArchivio[chiave]) databaseArchivio[chiave] = [];
+
+        const idx = databaseArchivio[chiave].findIndex(item => item.date.toLowerCase().includes(d.toLowerCase()));
+        if (idx >= 0) {
+            databaseArchivio[chiave][idx].label = l;
+            databaseArchivio[chiave][idx].baseHours = h;
+            databaseArchivio[chiave][idx].extraHours = e;
+        } else {
+            databaseArchivio[chiave].push({ date: d, label: l, baseHours: h, extraHours: e });
+        }
+
+        caricaTabellaMese();
+        writeLog("Turno manuale salvato per " + d);
+    }
+
+    // Caricamento iniziale
+    caricaTabellaMese();
+</script>
+
+</body>
+</html>
