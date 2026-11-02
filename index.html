@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Turni - Aviapartner</title>
-    <!-- pdf.js con fallback di sicurezza -->
+    <!-- Libreria PDF.js aggiornata -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         :root {
@@ -124,6 +124,7 @@
             margin-top: 8px;
             text-align: center;
             font-weight: bold;
+            word-break: break-word;
         }
     </style>
 </head>
@@ -131,30 +132,30 @@
 
 <div class="container">
     <h1>Gestione Turni - Aviapartner</h1>
-    <div class="subtitle">Estrattore PDF & Calcolo Monte Ore</div>
+    <div class="subtitle">Estrattore Reale PDF & Calcolo Ore</div>
 
     <!-- CARICAMENTO FILE PDF -->
     <div class="card">
-        <label for="workerName">Nome e Cognome (esattamente come nel PDF)</label>
-        <input type="text" id="workerName" value="Andrea Rocchini" placeholder="Es. Andrea Rocchini">
+        <label for="workerName">Nome e/o Cognome (come presente nel PDF)</label>
+        <input type="text" id="workerName" value="ROCCHINI" placeholder="Es. ROCCHINI oppure Andrea Rocchini">
 
         <label for="pdfFile">Seleziona il PDF dei Turni Aziendali</label>
         <input type="file" id="pdfFile" accept="application/pdf">
 
         <button class="btn" onclick="analizzaPDFReale()">Estrai I Miei Turni Dal PDF</button>
-        <div id="statusMessage">Carica il PDF e premi il pulsante.</div>
+        <div id="statusMessage">Carica il file PDF e premi il pulsante.</div>
     </div>
 
-    <!-- MODIFICA MANUALE E STRAORDINARI -->
+    <!-- MODIFICA MANUALE / STRAORDINARI -->
     <div class="card">
         <details>
             <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Aggiungi o Modifica Turno / Straordinario</summary>
             <div style="margin-top:10px;">
-                <label for="manualDate">Data o Giorno</label>
+                <label for="manualDate">Giorno o Data</label>
                 <input type="text" id="manualDate" placeholder="Es. Giorno 01 oppure 2026-11-01">
                 
                 <label for="manualLabel">Descrizione Turno</label>
-                <input type="text" id="manualLabel" value="Mattina (7h)" placeholder="Es. Mattina, Pomeriggio, Notte, Riposo">
+                <input type="text" id="manualLabel" value="Mattina (7h)" placeholder="Es. Mattina, Pomeriggio, Riposo">
 
                 <label for="manualHours">Ore Ordinarie</label>
                 <input type="number" id="manualHours" value="7" step="0.5">
@@ -162,4 +163,218 @@
                 <label for="manualExtra">Straordinario (h)</label>
                 <input type="number" id="manualExtra" value="0" step="0.5">
 
-                <button class="btn" onclick="aggiungiModificaManuale()">Salva Modifica
+                <button class="btn" onclick="aggiungiModificaManuale()">Salva Modifica Giorno</button>
+            </div>
+        </details>
+    </div>
+
+    <!-- RIEPILOGO E GRIGLIA -->
+    <div class="card">
+        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Reale</h3>
+        <div class="stats-grid">
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie</div>
+                <div class="stat-value" id="totalBaseHours">0 h</div>
+            </div>
+            <div class="stat-box">
+                <div style="font-size:0.75rem; color:#aaa;">Totale + Straordinari</div>
+                <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
+            </div>
+        </div>
+
+        <table class="shift-table">
+            <thead>
+                <tr>
+                    <th>Giorno</th>
+                    <th>Turno</th>
+                    <th>Extra (h)</th>
+                    <th>Totale</th>
+                </tr>
+            </thead>
+            <tbody id="shiftTableBody">
+                <tr><td colspan="4" style="color:#666;">Nessun turno estratto. Carica prima il file PDF.</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    }
+
+    let turniEstratti = JSON.parse(localStorage.getItem('aviapartner_pdf_shifts_v2')) || [];
+
+    function aggiornaTabella() {
+        localStorage.setItem('aviapartner_pdf_shifts_v2', JSON.stringify(turniEstratti));
+        const tbody = document.getElementById('shiftTableBody');
+        tbody.innerHTML = '';
+
+        let baseTotal = 0;
+        let extraTotal = 0;
+
+        if (turniEstratti.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno in memoria. Carica il PDF.</td></tr>';
+            document.getElementById('totalBaseHours').innerText = '0 h';
+            document.getElementById('totalFinalHours').innerText = '0 h';
+            return;
+        }
+
+        turniEstratti.forEach((item, index) => {
+            const row = document.createElement('tr');
+            const dayBase = parseFloat(item.baseHours) || 0;
+            const dayExtra = parseFloat(item.extraHours) || 0;
+            const dayTotal = dayBase + dayExtra;
+
+            baseTotal += dayBase;
+            extraTotal += dayExtra;
+
+            const isRiposo = dayBase === 0 && dayExtra === 0;
+
+            row.innerHTML = `
+                <td><strong>${item.date}</strong></td>
+                <td class="${isRiposo ? 'badge-riposo' : 'badge-lavoro'}">${item.label} (${dayBase}h)</td>
+                <td>
+                    <input type="number" class="extra-input" value="${dayExtra}" step="0.5" onchange="aggiornaExtra(${index}, this.value)">
+                </td>
+                <td><strong>${dayTotal} h</strong></td>
+            `;
+            tbody.appendChild(row);
+        });
+
+        document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
+        document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
+    }
+
+    async function analizzaPDFReale() {
+        const fileInput = document.getElementById('pdfFile');
+        const workerQuery = document.getElementById('workerName').value.trim().toLowerCase();
+        const status = document.getElementById('statusMessage');
+
+        if (!fileInput.files[0]) {
+            alert('Seleziona prima il file PDF dei turni.');
+            return;
+        }
+        if (!workerQuery) {
+            alert('Inserisci il Nome o Cognome da cercare.');
+            return;
+        }
+
+        status.style.color = 'var(--warning-color)';
+        status.innerText = "Avvio lettura PDF...";
+
+        try {
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
+
+            let testoCompletoPagine = [];
+
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                
+                // Mantiene il testo suddiviso in parole separate
+                const parolePagina = textContent.items.map(item => item.str.trim()).filter(str => str.length > 0);
+                testoCompletoPagine.push(...parolePagina);
+            }
+
+            // Ricerca dell'indice in cui compare il nome/cognome
+            const indexFound = testoCompletoPagine.findIndex(token => token.toLowerCase().includes(workerQuery));
+
+            if (indexFound === -1) {
+                status.style.color = 'var(--error-color)';
+                status.innerText = `Errore: '${workerQuery.toUpperCase()}' non è stato trovato dentro il PDF. Prova a inserire solo il Cognome in maiuscolo.`;
+                return;
+            }
+
+            status.innerText = "Nome individuato nel PDF! Estrazione turni...";
+
+            // Isola i token successivi al nome trovato per estrarre la sequenza turni
+            const tokenDopoNome = testoCompletoPagine.slice(indexFound + 1, indexFound + 60);
+            
+            turniEstratti = [];
+            let giornoCounter = 1;
+
+            tokenDopoNome.forEach(token => {
+                let tokenUpper = token.toUpperCase();
+                
+                // Salta parole di intestazione lunghe
+                if (tokenUpper.length > 15 || tokenUpper.includes('AVIAPARTNER')) return;
+
+                let ore = 0;
+                let etichetta = token;
+
+                if (tokenUpper.includes('R') || tokenUpper.includes('OFF') || tokenUpper.includes('RIP')) {
+                    ore = 0;
+                    etichetta = 'Riposo';
+                } else if (tokenUpper.match(/\d{1,2}-\d{1,2}/) || tokenUpper.match(/\d{1,2}:\d{2}/)) {
+                    ore = 7; // Orario standard rilevato
+                    etichetta = token;
+                } else if (!isNaN(token) && parseFloat(token) > 0 && parseFloat(token) <= 12) {
+                    ore = parseFloat(token);
+                    etichetta = token + ' ore';
+                } else {
+                    // Se è un codice di turno breve
+                    ore = 7;
+                }
+
+                if (giornoCounter <= 31) {
+                    turniEstratti.push({
+                        date: `Giorno ${String(giornoCounter).padStart(2, '0')}`,
+                        label: etichetta,
+                        baseHours: ore,
+                        extraHours: 0
+                    });
+                    giornoCounter++;
+                }
+            });
+
+            status.style.color = 'var(--success-color)';
+            status.innerText = `Completato! Estratti ${turniEstratti.length} turni per ${workerQuery.toUpperCase()}.`;
+            aggiornaTabella();
+
+        } catch (err) {
+            console.error(err);
+            status.style.color = 'var(--error-color)';
+            status.innerText = "Errore durante l'apertura del PDF: " + err.message;
+        }
+    }
+
+    function aggiornaExtra(index, val) {
+        turniEstratti[index].extraHours = parseFloat(val) || 0;
+        aggiornaTabella();
+    }
+
+    function aggiungiModificaManuale() {
+        const d = document.getElementById('manualDate').value;
+        const l = document.getElementById('manualLabel').value;
+        const h = parseFloat(document.getElementById('manualHours').value) || 0;
+        const e = parseFloat(document.getElementById('manualExtra').value) || 0;
+
+        if (!d) {
+            alert('Inserisci un giorno o una data.');
+            return;
+        }
+
+        const idx = turniEstratti.findIndex(item => item.date.toLowerCase() === d.toLowerCase());
+        if (idx >= 0) {
+            turniEstratti[idx].label = l;
+            turniEstratti[idx].baseHours = h;
+            turniEstratti[idx].extraHours = e;
+        } else {
+            turniEstratti.push({ date: d, label: l, baseHours: h, extraHours: e });
+        }
+
+        aggiornaTabella();
+        document.getElementById('statusMessage').style.color = 'var(--success-color)';
+        document.getElementById('statusMessage').innerText = "Giorno aggiornato con successo!";
+    }
+
+    // Avvio iniziale
+    aggiornaTabella();
+</script>
+
+</body>
+</html>
