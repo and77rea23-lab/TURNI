@@ -3,55 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Turni - Aviapartner</title>
+    <title>Gestione Turni Mensili - Aviapartner</title>
+    <!-- Libreria ufficiale PDF.js per lettura PDF da browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         :root {
             --bg-color: #121212;
             --card-bg: #1e1e1e;
             --text-color: #e0e0e0;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
+            --accent-color: #2563eb;
+            --accent-hover: #1d4ed8;
             --border-color: #333;
             --success-color: #10b981;
+            --warning-color: #f59e0b;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 15px;
+            padding: 12px;
             display: flex;
             justify-content: center;
         }
         .container {
             width: 100%;
-            max-width: 500px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 20px;
+            max-width: 600px;
         }
         h1 {
-            font-size: 1.4rem;
-            margin: 0 0 5px 0;
+            font-size: 1.3rem;
+            margin: 0 0 4px 0;
+            text-align: center;
             color: #fff;
         }
         .subtitle {
-            font-size: 0.85rem;
+            font-size: 0.8rem;
+            text-align: center;
             color: #888;
+            margin-bottom: 15px;
         }
         .card {
             background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 14px;
+            margin-bottom: 12px;
         }
         label {
             display: block;
             font-size: 0.85rem;
-            margin-bottom: 5px;
+            margin-bottom: 4px;
             color: #aaa;
         }
         input, select {
@@ -59,175 +60,7 @@
             padding: 10px;
             background-color: #2a2a2a;
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            color: #fff;
-            font-size: 1rem;
-            box-sizing: border-box;
-            margin-bottom: 12px;
-        }
-        button {
-            width: 100%;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 12px;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            cursor: pointer;
-            transition: background 0.2s;
-        }
-        button:hover {
-            background-color: var(--accent-hover);
-        }
-        .stats-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-        }
-        .stat-box {
-            background-color: #252525;
-            border: 1px solid var(--border-color);
-            padding: 12px;
-            border-radius: 8px;
-            text-align: center;
-        }
-        .stat-value {
-            font-size: 1.3rem;
-            font-weight: bold;
-            color: var(--success-color);
-            margin-top: 5px;
-        }
-        .shift-list {
-            margin-top: 15px;
-        }
-        .shift-item {
-            background-color: #252525;
-            padding: 10px;
             border-radius: 6px;
-            margin-bottom: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9rem;
-        }
-        .delete-btn {
-            background: none;
-            border: none;
-            color: #ef4444;
-            cursor: pointer;
-            font-size: 1rem;
-            width: auto;
-            padding: 0 5px;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <header>
-        <h1>Gestione Turni Aviapartner</h1>
-        <div class="subtitle">Controllo Orari e Pianificazione</div>
-    </header>
-
-    <div class="card">
-        <label for="employeeName">Operatore / Dipendente</label>
-        <input type="text" id="employeeName" value="Andrea Rocchini" placeholder="Inserisci nome e cognome">
-
-        <label for="shiftDate">Data Turno</label>
-        <input type="date" id="shiftDate">
-
-        <label for="shiftType">Tipo Turno / Orario</label>
-        <select id="shiftType">
-            <option value="07:00-14:00 (7 ore)">Mattina (07:00 - 14:00) [7h]</option>
-            <option value="14:00-21:00 (7 ore)">Pomeriggio (14:00 - 21:00) [7h]</option>
-            <option value="06:00-14:00 (8 ore)">Mattina Lunga (06:00 - 14:00) [8h]</option>
-            <option value="13:00-21:00 (8 ore)">Pomeriggio Lungo (13:00 - 21:00) [8h]</option>
-            <option value="Notte (8 ore)">Notte (22:00 - 06:00) [8h]</option>
-            <option value="Riposo">Riposo (0h)</option>
-        </select>
-
-        <button onclick="addShift()">Aggiungi Turno</button>
-    </div>
-
-    <div class="card">
-        <h3 style="margin-top:0; font-size:1rem; color:#fff;">Riepilogo Ore</h3>
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div style="font-size:0.8rem; color:#aaa;">Turni Registrati</div>
-                <div class="stat-value" id="totalShifts">0</div>
-            </div>
-            <div class="stat-box">
-                <div style="font-size:0.8rem; color:#aaa;">Ore Totali</div>
-                <div class="stat-value" id="totalHours">0 h</div>
-            </div>
-        </div>
-
-        <div class="shift-list" id="shiftListContainer">
-            <!-- I turni inseriti compariranno qui -->
-        </div>
-    </div>
-</div>
-
-<script>
-    // Imposta la data odierna di default nel selettore
-    document.getElementById('shiftDate').valueAsDate = new Date();
-
-    let shifts = JSON.parse(localStorage.getItem('aviapartner_shifts')) || [];
-
-    function renderShifts() {
-        const container = document.getElementById('shiftListContainer');
-        container.innerHTML = '';
-        
-        let totalH = 0;
-        shifts.forEach((shift, index) => {
-            // Estrae le ore stimate dalla stringa
-            let hours = 0;
-            if (shift.type.includes('7 ore')) hours = 7;
-            else if (shift.type.includes('8 ore')) hours = 8;
-            totalH += hours;
-
-            const div = document.createElement('div');
-            div.className = 'shift-item';
-            div.innerHTML = `
-                <div>
-                    <strong>${shift.date}</strong><br>
-                    <span style="color:#aaa; font-size:0.8rem;">${shift.type}</span>
-                </div>
-                <button class="delete-btn" onclick="deleteShift(${index})">✕</button>
-            `;
-            container.appendChild(div);
-        });
-
-        document.getElementById('totalShifts').innerText = shifts.length;
-        document.getElementById('totalHours').innerText = totalH + ' h';
-        
-        localStorage.setItem('aviapartner_shifts', JSON.stringify(shifts));
-    }
-
-    function addShift() {
-        const name = document.getElementById('employeeName').value;
-        const date = document.getElementById('shiftDate').value;
-        const type = document.getElementById('shiftType').value;
-
-        if (!date) {
-            alert('Seleziona una data valida.');
-            return;
-        }
-
-        shifts.push({ name, date, type });
-        renderShifts();
-    }
-
-    function deleteShift(index) {
-        shifts.splice(index, 1);
-        renderShifts();
-    }
-
-    // Carica i dati iniziali all'avvio
-    renderShifts();
-</script>
-
-</body>
-</html>
+            color: #fff;
+            font-size: 0.95rem;
+            box-sizing: border-box;
