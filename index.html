@@ -3,10 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Turni - Rocchini Andrea - Aviapartner</title>
+    <title>Gestione Turni - Aviapartner</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+        }
     </script>
     <style>
         :root {
@@ -16,6 +18,7 @@
             --accent-color: #2563eb;
             --success-color: #10b981;
             --border-color: #333;
+            --error-color: #ef4444;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -47,18 +50,18 @@
 <body>
 
 <div class="container">
-    <h1>Gestione Turni - Rocchini Andrea</h1>
-    <div class="subtitle">Lettura Tabellone PDF & Calcolo Monte Ore Reale</div>
+    <h1>Gestione Turni - Aviapartner</h1>
+    <div class="subtitle">Strumento Universale per Tutti i Dipendenti</div>
 
     <div class="card">
-        <label for="workerName">Dipendente da Estrarre</label>
-        <input type="text" id="workerName" value="ROCCHINI ANDREA">
+        <label for="workerName">Inserisci il tuo Nome e Cognome</label>
+        <input type="text" id="workerName" value="" placeholder="Es. ROCCHINI ANDREA">
 
-        <label for="pdfFile">Carica il PDF Ufficiale di Novembre 2026</label>
+        <label for="pdfFile">Carica il File PDF del Mese</label>
         <input type="file" id="pdfFile" accept="application/pdf">
 
-        <button class="btn" onclick="estraiTurniRocchini()">Estrai Turni Reali dal PDF</button>
-        <div id="statusMessage">Carica il PDF e premi il pulsante.</div>
+        <button class="btn" onclick="leggiPDFUniversale()">Estrai Turni dal PDF</button>
+        <div id="statusMessage">Inserisci il tuo nome, carica il PDF e premi il pulsante.</div>
     </div>
 
     <!-- MODIFICA MANUALE / STRAORDINARI -->
@@ -66,7 +69,7 @@
         <details>
             <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Modifica Turno o Aggiungi Straordinario</summary>
             <div style="margin-top:10px;">
-                <label for="manualDate">Giorno (es. Dom 01/11)</label>
+                <label for="manualDate">Data (es. Dom 01/11)</label>
                 <input type="text" id="manualDate" placeholder="Es. Dom 01/11">
                 
                 <label for="manualLabel">Orario Turno</label>
@@ -85,10 +88,10 @@
 
     <!-- RIEPILOGO ORE -->
     <div class="card">
-        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Novembre 2026</h3>
+        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Mensile</h3>
         <div class="stats-grid">
             <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie (da PDF)</div>
+                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie</div>
                 <div class="stat-value" id="totalBaseHours">0 h</div>
             </div>
             <div class="stat-box">
@@ -103,85 +106,9 @@
                     <th>Data</th>
                     <th>Turno Reale</th>
                     <th>Ore</th>
-                    <th>Extra (h)</th>
+                    <th>Extra</th>
                     <th>Totale</th>
                 </tr>
             </thead>
             <tbody id="shiftTableBody">
-                <tr><td colspan="5" style="color:#666;">Nessun turno in memoria. Carica il PDF.</td></tr>
-            </tbody>
-        </table>
-    </div>
-</div>
-
-<script>
-    let turniData = JSON.parse(localStorage.getItem('rocchini_turni_nov_2026')) || [];
-
-    function aggiornaTabella() {
-        localStorage.setItem('rocchini_turni_nov_2026', JSON.stringify(turniData));
-        const tbody = document.getElementById('shiftTableBody');
-        tbody.innerHTML = '';
-
-        let baseTotal = 0;
-        let extraTotal = 0;
-
-        if (turniData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="5" style="color:#666;">Nessun turno inserito. Carica il PDF sopra.</td></tr>';
-            document.getElementById('totalBaseHours').innerText = '0 h';
-            document.getElementById('totalFinalHours').innerText = '0 h';
-            return;
-        }
-
-        turniData.forEach((item, index) => {
-            const b = parseFloat(item.baseHours) || 0;
-            const e = parseFloat(item.extraHours) || 0;
-            baseTotal += b;
-            extraTotal += e;
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td><strong>${item.date}</strong></td>
-                <td>${item.label}</td>
-                <td>${b}h</td>
-                <td>
-                    <input type="number" class="extra-input" value="${e}" step="0.5" onchange="aggiornaExtra(${index}, this.value)">
-                </td>
-                <td><strong>${b + e} h</strong></td>
-            `;
-            tbody.appendChild(row);
-        });
-
-        document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
-        document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
-    }
-
-    async function estraiTurniRocchini() {
-        const fileInput = document.getElementById('pdfFile');
-        const workerQuery = document.getElementById('workerName').value.trim().toUpperCase();
-        const status = document.getElementById('statusMessage');
-
-        if (!fileInput.files[0]) {
-            alert('Seleziona il file PDF!');
-            return;
-        }
-
-        status.style.color = '#f59e0b';
-        status.innerText = "Analisi della riga di Rocchini Andrea in corso...";
-
-        try {
-            const file = fileInput.files[0];
-            const arrayBuffer = await file.arrayBuffer();
-            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-            const pdf = await loadingTask.promise;
-            const page = await pdf.getPage(1);
-            const textContent = await page.getTextContent();
-
-            let items = [];
-            textContent.items.forEach(item => {
-                let str = item.str.trim();
-                if (str) {
-                    items.push({ text: str, x: item.transform[4], y: item.transform[5] });
-                }
-            });
-
-            // Trova la riga vic
+                <tr><td colspan="5" style="color:#
