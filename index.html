@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestione Turni - Aviapartner</title>
+    <!-- pdf.js caricato da CDN affidabile -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+    </script>
     <style>
         :root {
             --bg-color: #121212;
@@ -14,6 +19,7 @@
             --border-color: #333;
             --success-color: #10b981;
             --warning-color: #f59e0b;
+            --error-color: #ef4444;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -120,6 +126,7 @@
             color: var(--warning-color);
             margin-top: 8px;
             text-align: center;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -127,30 +134,30 @@
 
 <div class="container">
     <h1>Gestione Turni - Aviapartner</h1>
-    <div class="subtitle">Caricamento Tabulato & Calcolo Ore</div>
+    <div class="subtitle">Estrattore Reale PDF & Calcolo Monte Ore</div>
 
-    <!-- CONFIGURAZIONE E CARICAMENTO PDF -->
+    <!-- CARICAMENTO FILE PDF REALE -->
     <div class="card">
-        <label for="workerName">Il tuo Nome e Cognome</label>
-        <input type="text" id="workerName" value="Andrea Rocchini" placeholder="Es. Andrea Rocchini">
+        <label for="workerName">Nome e Cognome (esattamente come nel PDF)</label>
+        <input type="text" id="workerName" value="Andrea Rocchini" placeholder="Es. ROCCHINI ANDREA o Andrea Rocchini">
 
-        <label for="pdfFile">Carica il PDF dei turni aziendali</label>
-        <input type="file" id="pdfFile" accept=".pdf,.txt">
+        <label for="pdfFile">Seleziona il PDF dei Turni Aziendali</label>
+        <input type="file" id="pdfFile" accept="application/pdf">
 
-        <button class="btn" onclick="leggiFileTurni()">Elabora Turni dal File</button>
-        <div id="statusMessage">Carica il file PDF per generare i tuoi turni reali.</div>
+        <button class="btn" onclick="analizzaPDFReale()">Estrai I Miei Turni Dal PDF</button>
+        <div id="statusMessage">Carica il PDF per estrarre la tua turnazione effettiva.</div>
     </div>
 
-    <!-- AGGIUNTA O MODIFICA RAPIDA / STRAORDINARI -->
+    <!-- MODIFICA MANUALE E STRAORDINARI -->
     <div class="card">
         <details>
-            <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Aggiungi Giorno o Straordinario Manuale</summary>
+            <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Aggiungi o Modifica Turno / Straordinario</summary>
             <div style="margin-top:10px;">
-                <label for="manualDate">Data</label>
-                <input type="date" id="manualDate">
+                <label for="manualDate">Data o Giorno</label>
+                <input type="text" id="manualDate" placeholder="Es. Giorno 01 oppure 2026-11-01">
                 
-                <label for="manualLabel">Tipo Turno / Descrizione</label>
-                <input type="text" id="manualLabel" value="Mattina (7h)" placeholder="Es. Mattina, Pomeriggio, Riposo">
+                <label for="manualLabel">Descrizione Turno</label>
+                <input type="text" id="manualLabel" value="Mattina (7h)" placeholder="Es. Mattina, Pomeriggio, Notte, Riposo">
 
                 <label for="manualHours">Ore Ordinarie</label>
                 <input type="number" id="manualHours" value="7" step="0.5">
@@ -158,65 +165,61 @@
                 <label for="manualExtra">Straordinario (h)</label>
                 <input type="number" id="manualExtra" value="0" step="0.5">
 
-                <button class="btn" onclick="aggiungiTurnoManuale()">Registra / Aggiorna Giorno</button>
+                <button class="btn" onclick="aggiungiModificaManuale()">Salva Modifica Giorno</button>
             </div>
         </details>
     </div>
 
-    <!-- RIEPILOGO ORE -->
+    <!-- RIEPILOGO E GRIGLIA -->
     <div class="card">
-        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Complessivo</h3>
+        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Reale</h3>
         <div class="stats-grid">
             <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Ore Pianificate (Base)</div>
+                <div style="font-size:0.75rem; color:#aaa;">Ore Ordinarie (da PDF)</div>
                 <div class="stat-value" id="totalBaseHours">0 h</div>
             </div>
             <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Totale Complessivo (+ Extra)</div>
+                <div style="font-size:0.75rem; color:#aaa;">Totale + Straordinari</div>
                 <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
             </div>
         </div>
 
-        <!-- GRIGLIA TURNI -->
         <table class="shift-table">
             <thead>
                 <tr>
-                    <th>Data</th>
-                    <th>Turno</th>
+                    <th>Giorno</th>
+                    <th>Turno Estratto</th>
                     <th>Extra (h)</th>
                     <th>Totale</th>
                 </tr>
             </thead>
             <tbody id="shiftTableBody">
-                <tr><td colspan="4" style="color:#666;">Nessun turno in memoria. Carica il file sopra.</td></tr>
+                <tr><td colspan="4" style="color:#666;">Nessun turno estratto. Carica prima il file PDF.</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    let monthlyData = JSON.parse(localStorage.getItem('aviapartner_safe_shifts')) || [];
+    let turniEstratti = JSON.parse(localStorage.getItem('aviapartner_pdf_real_data')) || [];
 
-    function saveAndRender() {
-        localStorage.setItem('aviapartner_safe_shifts', JSON.stringify(monthlyData));
+    function aggiornaTabella() {
+        localStorage.setItem('aviapartner_pdf_real_data', JSON.stringify(turniEstratti));
         const tbody = document.getElementById('shiftTableBody');
         tbody.innerHTML = '';
 
         let baseTotal = 0;
         let extraTotal = 0;
 
-        if (monthlyData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno inserito.</td></tr>';
+        if (turniEstratti.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="color:#666;">Nessun turno estratto. Carica il PDF.</td></tr>';
             document.getElementById('totalBaseHours').innerText = '0 h';
             document.getElementById('totalFinalHours').innerText = '0 h';
             return;
         }
 
-        monthlyData.sort((a, b) => new Date(a.date) - new Date(b.date));
-
-        monthlyData.forEach((item, index) => {
+        turniEstratti.forEach((item, index) => {
             const row = document.createElement('tr');
-            
             const dayBase = parseFloat(item.baseHours) || 0;
             const dayExtra = parseFloat(item.extraHours) || 0;
             const dayTotal = dayBase + dayExtra;
@@ -241,82 +244,42 @@
         document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
     }
 
-    function leggiFileTurni() {
+    async function analizzaPDFReale() {
         const fileInput = document.getElementById('pdfFile');
-        const workerName = document.getElementById('workerName').value.trim();
+        const workerName = document.getElementById('workerName').value.trim().toLowerCase();
         const status = document.getElementById('statusMessage');
 
         if (!fileInput.files[0]) {
-            alert('Seleziona prima il file PDF dei turni.');
+            alert('Seleziona il file PDF prima di premere il pulsante.');
             return;
         }
         if (!workerName) {
-            alert('Inserisci il nome e cognome.');
+            alert('Inserisci il Nome e Cognome per individuare la tua riga.');
             return;
         }
 
-        status.innerText = "File caricato. Generazione griglia mensile in corso...";
+        status.style.color = 'var(--warning-color)';
+        status.innerText = "Lettura del file PDF in corso...";
 
-        // Simulazione di lettura sicura del documento con i dati del mese associati
-        // Inserisce una base di turni del mese corrente che puoi perfezionare o integrare al volo
-        monthlyData = [];
-        let oggi = new Date();
-        let anno = oggi.getFullYear();
-        let mese = oggi.getMonth() + 1;
-        let giorniNelMese = new Date(anno, mese, 0).getDate();
+        try {
+            const file = fileInput.files[0];
+            const arrayBuffer = await file.arrayBuffer();
+            
+            // Caricamento del documento tramite PDF.js
+            const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+            const pdf = await loadingTask.promise;
 
-        for (let d = 1; d <= giorniNelMese; d++) {
-            let dataStr = `${anno}-${String(mese).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-            let isRiposo = (d % 7 === 0 || d % 7 === 6); // Fine settimana di esempio o riposi
-            monthlyData.push({
-                date: dataStr,
-                label: isRiposo ? 'Riposo' : 'Mattina/Turno (7h)',
-                baseHours: isRiposo ? 0 : 7,
-                extraHours: 0
-            });
-        }
+            let righeTesto = [];
 
-        saveAndRender();
-        status.innerText = "Turni del mese caricati con successo per " + workerName + "!";
-    }
+            // Legge tutte le pagine del PDF
+            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+                const page = await pdf.getPage(pageNum);
+                const textContent = await page.getTextContent();
+                
+                // Ricostruisce le righe di testo mantenendo la posizione
+                let items = textContent.items;
+                let lastY = null;
+                let currentLine = '';
 
-    function aggiornaExtra(index, value) {
-        monthlyData[index].extraHours = parseFloat(value) || 0;
-        saveAndRender();
-    }
-
-    function aggiungiTurnoManuale() {
-        const dateVal = document.getElementById('manualDate').value;
-        const labelVal = document.getElementById('manualLabel').value;
-        const hoursVal = parseFloat(document.getElementById('manualHours').value) || 0;
-        const extraVal = parseFloat(document.getElementById('manualExtra').value) || 0;
-
-        if (!dateVal) {
-            alert('Inserisci una data valida.');
-            return;
-        }
-
-        const existingIndex = monthlyData.findIndex(item => item.date === dateVal);
-        if (existingIndex >= 0) {
-            monthlyData[existingIndex].label = labelVal;
-            monthlyData[existingIndex].baseHours = hoursVal;
-            monthlyData[existingIndex].extraHours = extraVal;
-        } else {
-            monthlyData.push({
-                date: dateVal,
-                label: labelVal,
-                baseHours: hoursVal,
-                extraHours: extraVal
-            });
-        }
-
-        saveAndRender();
-        document.getElementById('statusMessage').innerText = "Turno e straordinari aggiornati!";
-    }
-
-    // Caricamento iniziale
-    saveAndRender();
-</script>
-
-</body>
-</html>
+                items.forEach(item => {
+                    if (lastY !== null && Math.abs(item.transform
