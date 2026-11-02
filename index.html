@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Turni - Aviapartner</title>
-    <!-- pdf.js ufficiale -->
+    <title>Archivio Turni - Aviapartner</title>
+    <!-- pdf.js ufficiale caricato in modo sicuro -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
         :root {
@@ -116,4 +116,46 @@
             margin: 0;
             text-align: center;
         }
-        .badge-riposo { color: #ef444
+        .badge-riposo { color: #ef4444; font-weight: bold; }
+        .badge-lavoro { color: #60a5fa; font-weight: bold; }
+        #statusMessage {
+            font-size: 0.85rem;
+            color: var(--warning-color);
+            margin-top: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Archivio Turni - Aviapartner</h1>
+    <div class="subtitle">Gestione Mensile Dipendenti</div>
+
+    <!-- CONFIGURAZIONE UTENTE E MESE -->
+    <div class="card">
+        <label for="workerName">Il tuo Nome e Cognome (Campo libero per tutti)</label>
+        <input type="text" id="workerName" value="" placeholder="Inserisci Cognome o Nome">
+
+        <label for="monthSelect">Seleziona Mese di Riferimento</label>
+        <select id="monthSelect" onchange="cambiaMese()">
+            <option value="2026-10">Ottobre 2026</option>
+            <option value="2026-11" selected>Novembre 2026</option>
+            <option value="2026-12">Dicembre 2026</option>
+            <option value="2027-01">Gennaio 2027</option>
+            <option value="2027-02">Febbraio 2027</option>
+            <option value="2027-03">Marzo 2027</option>
+        </select>
+
+        <label for="pdfFile">Carica il PDF del Tabellone Mensile</label>
+        <input type="file" id="pdfFile" accept="application/pdf">
+
+        <button class="btn" onclick="analizzaPDFMensile()">Carica Turni del Mese dal PDF</button>
+        <div id="statusMessage">Scrivi il tuo nome, seleziona il mese e carica il file.</div>
+    </div>
+
+    <!-- AGGIUNTA MANUALE E STRAORDINARI -->
+    <div class="card">
+        <details>
+            <summary style="cursor:pointer;
