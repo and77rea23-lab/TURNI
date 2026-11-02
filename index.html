@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestione Turni Reali - Aviapartner</title>
+    <title>Gestione Turni - Aviapartner</title>
     <!-- pdf.js ufficiale -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <style>
@@ -116,75 +116,4 @@
             margin: 0;
             text-align: center;
         }
-        .badge-riposo { color: #ef4444; font-weight: bold; }
-        .badge-lavoro { color: #60a5fa; font-weight: bold; }
-        #statusMessage {
-            font-size: 0.85rem;
-            color: var(--warning-color);
-            margin-top: 8px;
-            text-align: center;
-            font-weight: bold;
-            word-break: break-word;
-        }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <h1>I Miei Turni - Aviapartner</h1>
-    <div class="subtitle">Lettura Reale PDF & Calcolo Monte Ore</div>
-
-    <!-- CARICAMENTO PDF -->
-    <div class="card">
-        <label for="workerName">Cognome o Nome (come a tabellone)</label>
-        <input type="text" id="workerName" value="ROCCHINI" placeholder="Es. ROCCHINI">
-
-        <label for="pdfFile">Seleziona il PDF dei Turni</label>
-        <input type="file" id="pdfFile" accept="application/pdf">
-
-        <button class="btn" onclick="estraiTurniReali()">Carica e Analizza PDF Reale</button>
-        <div id="statusMessage">Seleziona il PDF aziendale per estrarre la tua turnazione.</div>
-    </div>
-
-    <!-- STRAORDINARI E AGGIUNTA MANUALE -->
-    <div class="card">
-        <details>
-            <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Modifica Giorno o Aggiungi Straordinario</summary>
-            <div style="margin-top:10px;">
-                <label for="manualDate">Data o Giorno (es. Lun 01)</label>
-                <input type="text" id="manualDate" placeholder="Es. Lun 01/11">
-                
-                <label for="manualLabel">Turno / Codice</label>
-                <input type="text" id="manualLabel" value="07:00 - 14:00" placeholder="Es. RIP, 07:00 - 14:00, Notte">
-
-                <label for="manualHours">Ore Ordinarie</label>
-                <input type="number" id="manualHours" value="7" step="0.5">
-
-                <label for="manualExtra">Ore Straordinario</label>
-                <input type="number" id="manualExtra" value="0" step="0.5">
-
-                <button class="btn" onclick="salvaModificaManuale()">Aggiorna Turno</button>
-            </div>
-        </details>
-    </div>
-
-    <!-- RIEPILOGO MESE -->
-    <div class="card">
-        <h3 style="margin:0; font-size:1rem; color:#fff;">Monte Ore Reale Calcolato</h3>
-        <div class="stats-grid">
-            <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Ore Pianificate (Base)</div>
-                <div class="stat-value" id="totalBaseHours">0 h</div>
-            </div>
-            <div class="stat-box">
-                <div style="font-size:0.75rem; color:#aaa;">Totale + Straordinari</div>
-                <div class="stat-value" id="totalFinalHours" style="color:#60a5fa;">0 h</div>
-            </div>
-        </div>
-
-        <table class="shift-table">
-            <thead>
-                <tr>
-                    <th>Giorno / Data</th>
-                    <th>Turno Reale</th>
-                    <th>Extra (h)
+        .badge-riposo { color: #ef444
