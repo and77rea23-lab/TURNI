@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Archivio Turni - Aviapartner</title>
-    <!-- pdf.js caricato da CDN affidabile -->
+    <!-- pdf.js ufficiale -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
@@ -129,7 +129,7 @@
             font-family: monospace;
             font-size: 0.75rem;
             color: #00ff00;
-            max-height: 150px;
+            max-height: 120px;
             overflow-y: auto;
             margin-top: 10px;
             white-space: pre-wrap;
@@ -140,12 +140,12 @@
 
 <div class="container">
     <h1>Archivio Turni - Aviapartner</h1>
-    <div class="subtitle">Estrattore PDF Aziendale & Monte Ore</div>
+    <div class="subtitle">Estrattore Reale PDF & Monte Ore</div>
 
     <!-- SELEZIONE UTENTE, MESE E CARICAMENTO PDF -->
     <div class="card">
-        <label for="workerName">Cognome o Nome da cercare nel PDF</label>
-        <input type="text" id="workerName" value="" placeholder="Es. ROCCHINI oppure Andrea">
+        <label for="workerName">Cognome e Nome (es. ROCCHINI ANDREA)</label>
+        <input type="text" id="workerName" value="ROCCHINI ANDREA" placeholder="Es. ROCCHINI ANDREA">
 
         <label for="monthSelect">Seleziona Mese</label>
         <select id="monthSelect" onchange="caricaTabellaMese()">
@@ -159,13 +159,13 @@
         <label for="pdfFile">File PDF Turni Mensili</label>
         <input type="file" id="pdfFile" accept="application/pdf">
 
-        <button class="btn" onclick="analizzaPDFConDiagnostica()">Analizza PDF e Carica Turni</button>
+        <button class="btn" onclick="analizzaPDFIntelligente()">Analizza PDF e Carica Turni</button>
         
-        <label style="margin-top: 10px;">Stato Analisi (Diagnostica):</label>
-        <div id="debugConsole">In attesa del caricamento file PDF...</div>
+        <label style="margin-top: 10px;">Diagnostica:</label>
+        <div id="debugConsole">Pronto per la lettura del file...</div>
     </div>
 
-    <!-- AGGIUNTA O MODIFICA MANUALE / STRAORDINARI -->
+    <!-- MODIFICA MANUALE / STRAORDINARI -->
     <div class="card">
         <details>
             <summary style="cursor:pointer; font-weight:bold; color:#fff;">+ Modifica Turno o Aggiungi Straordinario</summary>
@@ -218,7 +218,7 @@
 </div>
 
 <script>
-    let databaseArchivio = JSON.parse(localStorage.getItem('aviapartner_pdf_diag_v7')) || {};
+    let databaseArchivio = JSON.parse(localStorage.getItem('aviapartner_pdf_smart_v8')) || {};
 
     function writeLog(msg) {
         const consoleEl = document.getElementById('debugConsole');
@@ -227,7 +227,7 @@
     }
 
     function clearLog() {
-        document.getElementById('debugConsole').innerText = "> Inizio diagnostica...";
+        document.getElementById('debugConsole').innerText = "> Avvio analisi intelligente...";
     }
 
     function getChiaveDB() {
@@ -282,45 +282,38 @@
         document.getElementById('totalBaseHours').innerText = baseTotal + ' h';
         document.getElementById('totalFinalHours').innerText = (baseTotal + extraTotal) + ' h';
         
-        localStorage.setItem('aviapartner_pdf_diag_v7', JSON.stringify(databaseArchivio));
+        localStorage.setItem('aviapartner_pdf_smart_v8', JSON.stringify(databaseArchivio));
     }
 
-    async function analizzaPDFConDiagnostica() {
+    async function analizzaPDFIntelligente() {
         clearLog();
         const fileInput = document.getElementById('pdfFile');
-        const queryNome = document.getElementById('workerName').value.trim().toUpperCase();
+        const queryCognome = document.getElementById('workerName').value.trim().toUpperCase();
 
-        if (!queryNome) {
-            alert('Scrivi il Cognome o Nome nella casella prima di cliccare.');
-            writeLog("ERRORE: Campo Nome vuoto.");
+        if (!queryCognome) {
+            alert('Inserisci il nome o cognome.');
             return;
         }
         if (!fileInput.files[0]) {
-            alert('Seleziona prima un file PDF.');
-            writeLog("ERRORE: Nessun file PDF selezionato.");
+            alert('Seleziona prima il file PDF.');
             return;
         }
 
-        writeLog(`Ricerca dipendente: "${queryNome}"`);
-        writeLog(`File: ${fileInput.files[0].name}`);
+        writeLog(`Ricerca mirata per: "${queryCognome}"`);
 
         try {
             const file = fileInput.files[0];
             const arrayBuffer = await file.arrayBuffer();
-            writeLog("Caricamento PDF in memoria...");
-
             const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
             const pdf = await loadingTask.promise;
-            writeLog(`PDF aperto correttamente. Pagine totali: ${pdf.numPages}`);
+            writeLog(`Pagine PDF totali: ${pdf.numPages}`);
 
-            let testoTuttePagine = [];
             let rigaTrovata = null;
 
             for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
                 const page = await pdf.getPage(pageNum);
                 const textContent = await page.getTextContent();
                 
-                // Raggruppa gli elementi del testo per riga (coordinata Y con tolleranza 6px)
                 let righeMappa = {};
                 textContent.items.forEach(item => {
                     let textStr = item.str.trim();
@@ -329,7 +322,7 @@
                     let y = Math.round(item.transform[5]);
                     let x = Math.round(item.transform[4]);
 
-                    let yChiave = Object.keys(righeMappa).find(k => Math.abs(k - y) <= 6);
+                    let yChiave = Object.keys(righeMappa).find(k => Math.abs(k - y) <= 5);
                     if (!yChiave) {
                         yChiave = y;
                         righeMappa[yChiave] = [];
@@ -337,14 +330,14 @@
                     righeMappa[yChiave].push({ x: x, str: textStr });
                 });
 
-                // Ordina ogni riga da sinistra a destra
                 Object.keys(righeMappa).forEach(y => {
                     righeMappa[y].sort((a, b) => a.x - b.x);
                     let testoRiga = righeMappa[y].map(e => e.str).join(' ');
                     
-                    if (testoRiga.toUpperCase().includes(queryNome)) {
+                    // Controllo rigoroso sul nome/cognome inserito
+                    if (testoRiga.toUpperCase().includes(queryCognome)) {
                         rigaTrovata = righeMappa[y];
-                        writeLog(`NOME TROVATO a Pagina ${pageNum}!`);
+                        writeLog(`Trovata riga esatta a Pagina ${pageNum}!`);
                     }
                 });
 
@@ -352,25 +345,42 @@
             }
 
             if (!rigaTrovata) {
-                writeLog(`ERRORE: "${queryNome}" NON trovato in nessuna pagina del PDF.`);
-                alert(`Impossibile trovare "${queryNome}" nel PDF. Verifica se nel file il cognome è scritto diversamente.`);
+                writeLog(`ERRORE: Impossibile trovare "${queryCognome}" nel file.`);
+                alert(`Impossibile trovare "${queryCognome}". Assicurati di aver scritto esattamente il cognome (es. ROCCHINI).`);
                 return;
             }
 
-            // Isola i token trovati sulla riga del dipendente
-            let elementiTurno = rigaTrovata.map(e => e.str.toUpperCase()).filter(str => !str.includes(queryNome));
-            writeLog(`Elementi estratti dalla riga: ${elementiTurno.length}`);
-
-            let turniFinali = [];
-            const selectMese = document.getElementById('monthSelect').value;
-            let [annoStr, meseStr] = selectMese.split('-');
+            // Calcola quanti giorni ha ESATTAMENTE il mese selezionato (es. Novembre = 30)
+            const selectMeseVal = document.getElementById('monthSelect').value; // es. "2026-11"
+            let [annoStr, meseStr] = selectMeseVal.split('-');
             let anno = parseInt(annoStr);
             let mese = parseInt(meseStr) - 1;
+            
+            let giorniNelMese = new Date(anno, mese + 1, 0).getDate();
+            writeLog(`Mese selezionato: ${selectMeseVal} (${giorniNelMese} giorni totali).`);
+
+            // Estrae solo gli elementi dopo il nome e prende ESATTAMENTE il numero di giorni del mese
+            let elementiRiga = rigaTrovata.map(e => e.str);
+            let indiceNome = elementiRiga.findIndex(e => e.toUpperCase().includes(queryCognome));
+            
+            let tokenTurni = [];
+            if (indiceNome >= 0) {
+                tokenTurni = elementiRiga.slice(indiceNome + 1);
+            } else {
+                tokenTurni = elementiRiga;
+            }
+
+            // Taglia rigorosamente al numero di giorni del mese (es. max 30 per novembre)
+            tokenTurni = tokenTurni.slice(0, giorniNelMese);
+            writeLog(`Token turno estratti e limitati a ${tokenTurni.length} giorni.`);
+
+            let turniFinali = [];
             let giorniSettimana = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 
-            let giornoProgressivo = 1;
+            for (let i = 0; i < giorniNelMese; i++) {
+                let giornoNum = i + 1;
+                let tok = (tokenTurni[i] ? tokenTurni[i].toUpperCase() : "7");
 
-            elementiTurno.forEach(tok => {
                 let ore = 7;
                 let etichetta = tok;
 
@@ -384,9 +394,9 @@
                     etichetta = ore + ' Ore';
                 }
 
-                let dTemp = new Date(anno, mese, giornoProgressivo);
+                let dTemp = new Date(anno, mese, giornoNum);
                 let nomeGiorno = giorniSettimana[dTemp.getDay()];
-                let dataFormatted = `${nomeGiorno} ${String(giornoProgressivo).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}`;
+                let dataFormatted = `${nomeGiorno} ${String(giornoNum).padStart(2, '0')}/${String(mese + 1).padStart(2, '0')}`;
 
                 turniFinali.push({
                     date: dataFormatted,
@@ -394,18 +404,16 @@
                     baseHours: ore,
                     extraHours: 0
                 });
-
-                giornoProgressivo++;
-            });
+            }
 
             const chiave = getChiaveDB();
             databaseArchivio[chiave] = turniFinali;
 
-            writeLog(`ESITO: Generati ${turniFinali.length} giorni di turno!`);
+            writeLog(`SUCCESSO! Caricati esattamente ${turniFinali.length} giorni.`);
             caricaTabellaMese();
 
         } catch (err) {
-            writeLog("ECCEZIONE CRITICA: " + err.message);
+            writeLog("ERRORE CRITICO: " + err.message);
             console.error(err);
         }
     }
@@ -425,7 +433,7 @@
         const e = parseFloat(document.getElementById('manualExtra').value) || 0;
 
         if (!d) {
-            alert('Inserisci la data o il giorno.');
+            alert('Inserisci la data.');
             return;
         }
 
@@ -442,10 +450,9 @@
         }
 
         caricaTabellaMese();
-        writeLog("Turno manuale salvato per " + d);
+        writeLog("Aggiornato manualmente: " + d);
     }
 
-    // Caricamento iniziale
     caricaTabellaMese();
 </script>
 
